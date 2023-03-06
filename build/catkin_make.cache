@@ -1,0 +1,2 @@
+courseworks:getting_started:motor_control:pid_control
+-DCATKIN_DEVEL_PREFIX=/home/jose/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/jose/catkin_ws/install -G Unix Makefiles

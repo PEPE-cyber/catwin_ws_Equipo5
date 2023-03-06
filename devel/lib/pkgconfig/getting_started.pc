@@ -1,0 +1,8 @@
+prefix=/home/jose/catkin_ws/devel
+
+Name: getting_started
+Description: Description of getting_started
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
