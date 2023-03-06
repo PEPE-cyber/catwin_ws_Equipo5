@@ -2,14 +2,42 @@
 import rospy
 import numpy as np
 from std_msgs.msg import Float32
+import sys, select, os
+if os.name == 'nt':
+  import msvcrt, time
+else:
+  import tty, termios
 
 
 
+# Funcion obtenida de https://github.com/ROBOTIS-GIT/turtlebot3/blob/66681b33749c44e7d9022253ac210ef2da7843a0/turtlebot3_teleop/nodes/turtlebot3_teleop_key
+# Codigo original de Rushikesh Kamalapurkar (rlkamalapurkar)
+def getKey():
+    if os.name != 'nt':
+        settings = termios.tcgetattr(sys.stdin)
+    if os.name == 'nt':
+        timeout = 0.1
+        startTime = time.time()
+        while(1):
+            if msvcrt.kbhit():
+                if sys.version_info[0] >= 3:
+                    return msvcrt.getch().decode()
+                else:
+                    return msvcrt.getch()
+            elif time.time() - startTime > timeout:
+                return ''
 
-#Stop Condition
-def stop():
- #Setup the stop message (can be the same as the control message)
-  print("Stopping")
+    tty.setraw(sys.stdin.fileno())
+    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+    if rlist:
+        key = sys.stdin.read(1)
+    else:
+        key = ''
+
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    return key
+
+
 
 class InputGenerator:
     def __init__(self):
@@ -24,6 +52,11 @@ class InputGenerator:
         # Setup the time and previous time
         self.time =  rospy.get_time()
         self.prevTime = rospy.get_time()
+        self.key = ''
+        if not (self.signal == "step" or self.signal == "square" or self.signal == "sinusoidal"):
+            rospy.loginfo("Using keyboard control. Press 'w' to increase the speed and 's' to decrease the speed. Press 'q' to quit.")
+           
+            
 
     def run(self):
         # Get the current time
@@ -38,19 +71,34 @@ class InputGenerator:
             if rospy.get_time() - self.prevTime > ( 1 / self.freq):
                 # If the pwm value is positive, make it negative and vice versa
                 if self.pwmValue > 0:
-                    self.pwmValue = -self.amplitude
+                    self.pwmValue = -abs(self.amplitude)
                 else:
-                    self.pwmValue =  self.amplitude
+                    self.pwmValue =  abs(self.amplitude)
                 # Update the previous time for the next period
                 self.prevTime = rospy.get_time()
-        else: 
-            # Calculate the pwm value with a rectangular function
+        elif self.signal == "step": 
+            # Calculate the pwm value with a step function
             # Check if the time is less than the previous time + 5 seconds. If it is, set the pwm value to 0
             if rospy.get_time() < (self.prevTime + 5):
                 self.pwmValue = 0
             # If the time has passed, set the pwm value to the amplitude (start the step)
             else:
                 self.pwmValue = self.amplitude
+        else:
+            if self.key != 'q':
+                self.key = getKey()
+            if self.key == 'w':
+                if self.pwmValue < 100:
+                    self.pwmValue += 5
+            elif self.key == 's':
+                if self.pwmValue > -100:
+                    self.pwmValue -= 5
+            if self.key == 'q':
+                rospy.signal_shutdown("Quit Motor")
+                print("Quitting from keyboard")
+           
+                
+
         # Publish the pwm value
         self.pwmPub.publish(self.pwmValue)
 
@@ -76,3 +124,6 @@ if __name__=='__main__':
         input.run()
         #Write your code here
         rate.sleep()
+
+
+    
