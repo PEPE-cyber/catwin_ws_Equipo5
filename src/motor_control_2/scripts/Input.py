@@ -91,10 +91,10 @@ class InputGenerator:
             if self.key != 'q':
                 self.key = getKey()
             if self.key == 'w':
-                if self.setpointValue < 100:
+                if self.setpointValue < 100  or True:
                     self.setpointValue += 5
             elif self.key == 's':
-                if self.setpointValue > -100:
+                if self.setpointValue > -100 or True:
                     self.setpointValue -= 5
             if self.key == 'q':
                 rospy.signal_shutdown("Quit Motor")

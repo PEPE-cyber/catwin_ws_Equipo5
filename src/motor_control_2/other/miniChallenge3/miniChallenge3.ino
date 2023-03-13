@@ -22,10 +22,9 @@ void encoderInterruptEncoder(){
   long currentTime = micros();
   // Calculate the time difference
   long timeDiff = currentTime - previousTime;
-  // Calculate the speed (RPM)
-  speed = 60000000.0 / (timeDiff * 11 * 35);
   // Update the previous time
   previousTime = currentTime;
+  speed = 60000000 / ( 11.0 * 35.0 * timeDiff);
   // Update the number of pulses depending on the direction
   if (digitalRead(encoderPinB) == LOW){
     pulses--;
@@ -45,7 +44,8 @@ void motorInputCb( const motor_control_2::motor_input& motor_input){
   // Get the pwm value from the message
   float receivedValue = motor_input.value; 
   // Map the value to the range 0-255
-  int pwmValue = map(abs(receivedValue), 0, 100, 0, 255);
+  int pwmValue = abs(receivedValue) * 255;
+  // map(abs(receivedValue), 0, 1, 0, 255);
   // Set the value to the pwm pin
   analogWrite(pwmPin, pwmValue);
   // Set the direction of the motor
@@ -90,27 +90,28 @@ void setup()
   nh.subscribe(sub);
 }
 
-const int samplingPeriod = 10; // ms
+const int samplingPeriod = 2; // ms
 long previousMillis = 0;
 long currentMillis = 0;
-
+float previousSpeed = 0;
 void loop()
 {
   
   currentMillis = millis();
   // If the sampling period has passed, publish the speed
   if (currentMillis - previousMillis > samplingPeriod) {
-    previousMillis = currentMillis;
+    float avg = (speed + previousSpeed) / 2;
+    previousSpeed = speed;
+    // Calculate the speed (RPS)
     motor_output.speed = speed;
-    int len = direction.length()+1;
+    int len = direction.length() + 1;
     char buf[len];
     direction.toCharArray(buf, len);
     motor_output.direction = buf;
-    float revolutions = pulses /  (11.0 * 35.0);
+    float revolutions = pulses / (11 * 35);
     motor_output.rev = revolutions;
     pub.publish(&motor_output); 
   }
-  
   nh.spinOnce();
   delay(1);
 }

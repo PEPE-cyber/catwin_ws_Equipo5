@@ -32,15 +32,16 @@ class PIDController:
 
     
     def updateFromMotorOutput(self, output):
+        time = rospy.get_time()
         # Check if this is the first time we have received a message
         if self.prev_time != 0:
             # Calculate the dt, error, error_sum (integral) and error_diff (derivative)
             # The dt is the time difference between messages
-            dt = output.time - self.prev_time
+            dt = 0.02
             # Update the previous time for the next iteration
-            self.prev_time = output.time
+            self.prev_time = time
             # Calculate the error (difference between the setpoint and the output of the motor)
-            self.error = self.setpoint - output.output 
+            self.error = self.setpoint - output.speed 
             # Calculate the error_sum (integral) with trapezoidal integration
             self.error_sum += (self.error + self.prev_error) * dt / 2
             # Calculate the error_diff (derivative) (actual error - previous error divided by dt)
@@ -48,31 +49,29 @@ class PIDController:
             # Update the previous error for the next iteration
             self.prev_error = self.error
         else:
-            self.prev_time = output.time
-        #print("setpoint", self.setpoint, "MotorOutput",  output.output, "Error", self.error, "MotorInput", self.controllerOutput.value)
+            self.prev_time = time
+        
+        self.controllerOutput.value = self.get_output()
+        self.controllerOutput.time = rospy.get_time()
+        self.motorInputPub.publish(self.controllerOutput)
+        #print("sed tpoint", self.setpoint, "MotorOutput",  output.output, "Error", self.error, "MotorInput", self.controllerOutput.value)
 
     def get_output(self):
         # Calculate the output of the controller
         pidOutput = self.kp * self.error + self.ki * self.error_sum + self.kd * self.error_diff
         # Range limit the output of the controller
+        pidOutput = pidOutput / 150
         if pidOutput > 1:
-            pidOutput = 1
+            pidOutput = 1.0
         elif pidOutput < -1:
-            pidOutput = -1
-        # Set the output of the controller (motor_input)
-        self.controllerOutput.value = pidOutput
-        self.controllerOutput.time = rospy.get_time()
-        return self.controllerOutput
-    
-    def run(self):
-        # Check if the output has been updated
-        if self.prev_output != self.controllerOutput.value:
-            # Update the previous output for the next iteration
-            self.prev_output = self.controllerOutput.value
-            # Publish the output of the controller
-            self.motorInputPub.publish(controller.get_output())
+            pidOutput = -1.0
+        return pidOutput
+            
   
     def stop(self):
+        self.controllerOutput.value = 0
+        self.controllerOutput.time = rospy.get_time()
+        self.motorInputPub.publish(self.controllerOutput)
         print("Stopping")
 
     def updateSetpoint(self, setpoint):
@@ -94,7 +93,6 @@ if __name__=='__main__':
     print("The Controller is Running")
     #Run the node
     while not rospy.is_shutdown():
-        controller.run()
         errorPub.publish(controller.error)
         rate.sleep()
 
