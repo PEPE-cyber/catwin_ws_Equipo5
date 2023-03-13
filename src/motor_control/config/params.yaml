@@ -1,4 +1,4 @@
-# step, square, sinusoidal
-signal_type : manual
+# step, square, sinusoidal, keyboard
+signal_type : step
 frequency : .5
-amplitude: 100
+amplitude: 50

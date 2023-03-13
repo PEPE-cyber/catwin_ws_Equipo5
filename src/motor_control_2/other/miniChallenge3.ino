@@ -10,8 +10,10 @@
 #define encoderPinA 2
 #define encoderPinB 3
 
+
 long previousTime = 0;
 int pulses = 0;
+float speed = 0;
 
 // Function to get the speed
 void encoderInterruptEncoder(){
@@ -19,8 +21,8 @@ void encoderInterruptEncoder(){
   long currentTime = micros();
   // Calculate the time difference
   long timeDiff = currentTime - previousTime;
-  // Calculate the speed
-  speed = 1000000.0 / timeDiff;
+  // Calculate the speed (RPM)
+  speed = 60000000.0 / (timeDiff * 11 * 35);
   // Update the previous time
   previousTime = currentTime;
   // Update the number of pulses depending on the direction
@@ -90,8 +92,7 @@ void loop()
   currentMillis = millis();
   // If the sampling period has passed, publish the speed
   if (currentMillis - previousMillis > samplingPeriod) {
-    previousMillis = currentMillis; 
-    float speed = getSpeed();
+    previousMillis = currentMillis;
     motor_output.data = speed;
     pub.publish(&motor_output); 
   }
