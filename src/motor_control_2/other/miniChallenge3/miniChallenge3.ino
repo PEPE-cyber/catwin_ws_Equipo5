@@ -18,22 +18,23 @@ float speed = 0;
 String direction = "stopped";
 // Function to get the speed
 void encoderInterruptEncoder(){
-  // Get the current time
-  long currentTime = micros();
-  // Calculate the time difference
-  long timeDiff = currentTime - previousTime;
-  // Update the previous time
-  previousTime = currentTime;
-  speed = 60000000 / ( 11.0 * 35.0 * timeDiff);
-  // Update the number of pulses depending on the direction
-  if (digitalRead(encoderPinB) == LOW){
-    pulses--;
-    speed = -speed;
-    direction = "counterclockwise";
-  } else {
-    pulses++;
-    direction = "clockwise";
-  }
+ // Get the current time
+ long currentTime = micros();
+ // Calculate the time difference
+ long timeDiff = currentTime - previousTime;
+ // Calculate the speed Radians per second
+ speed = 6.2831853072 * 1000000.0 / (timeDiff * 385.0);// 11 pulses per motor turn and a 35:1 gearbox ratio
+ // Update the previous time
+ previousTime = currentTime;
+ // Update the number of pulses depending on the direction
+ if (digitalRead(encoderPinB) == LOW){
+   pulses--;
+   direction = "counterclockwise";
+   speed = -speed;
+ } else {
+   pulses++;
+   direction = "clockwise";
+ }
 }
 
 
@@ -113,5 +114,4 @@ void loop()
     pub.publish(&motor_output); 
   }
   nh.spinOnce();
-  delay(1);
 }

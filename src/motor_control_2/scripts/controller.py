@@ -60,7 +60,8 @@ class PIDController:
         # Calculate the output of the controller
         pidOutput = self.kp * self.error + self.ki * self.error_sum + self.kd * self.error_diff
         # Range limit the output of the controller
-        pidOutput = pidOutput / 150
+        pidOutput = pidOutput / 100
+        pidOutput = pidOutput / 255
         if pidOutput > 1:
             pidOutput = 1.0
         elif pidOutput < -1:
