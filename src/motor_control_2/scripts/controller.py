@@ -29,6 +29,15 @@ class PIDController:
         self.setpointSub = rospy.Subscriber("/set_point", set_point, self.updateSetpoint, queue_size=10)
         print("Controller Initialised")
         print("kp: " + str(self.kp) + " ki: " + str(self.ki) + " kd: " + str(self.kd))
+        # performance variables
+        self.sse = 0.0
+        self.sae = 0.0
+        self.startTime = 0.0
+        self.settling_time = 0.0
+        self.error_band = 2.0
+        self.overshoot = 0.0
+        self.prev_diff = 0.0
+
 
     
     def updateFromMotorOutput(self, output):
@@ -48,12 +57,27 @@ class PIDController:
             self.error_diff = (self.error - self.prev_error) / dt
             # Update the previous error for the next iteration
             self.prev_error = self.error
+
+            # Calculate the performance variables
+            self.sse += self.error**2
+            self.sae += abs(self.error)
+            # Check if it has passed the setpoint (error has different sign to setpoint)
+            if self.error * self.setpoint < 0:
+                # Check if the error difference has changed sign
+                if self.error_diff * self.prev_diff < 0:
+                    if self.error > self.overshoot:
+                        self.overshoot = self.error
+                    # Check if the error is within the error band
+                    if abs(self.error) < self.error_band and self.settling_time == 0:
+                        self.settling_time = rospy.get_time() - self.startTime
+                self.prev_diff = self.error_diff
+            self.controllerOutput.value = self.get_output()
+            self.controllerOutput.time = rospy.get_time()
+            self.motorInputPub.publish(self.controllerOutput)
         else:
             self.prev_time = time
         
-        self.controllerOutput.value = self.get_output()
-        self.controllerOutput.time = rospy.get_time()
-        self.motorInputPub.publish(self.controllerOutput)
+        
         #print("sed tpoint", self.setpoint, "MotorOutput",  output.output, "Error", self.error, "MotorInput", self.controllerOutput.value)
 
     def get_output(self):
@@ -73,10 +97,19 @@ class PIDController:
         self.controllerOutput.value = 0
         self.controllerOutput.time = rospy.get_time()
         self.motorInputPub.publish(self.controllerOutput)
-        print("Stopping")
+        print("Stopping controller")
 
     def updateSetpoint(self, setpoint):
-        self.setpoint = setpoint.value
+        # Check if the setpoint has changed
+        if self.setpoint != setpoint.value:
+            print("Setpoint: " + str(self.setpoint) + ", Settling Time: " + str(self.settling_time) + ", Overshoot: " + str(self.overshoot) + ", SSE: " + str(self.sse) + ", SAE: " + str(self.sae))
+            self.settling_time = 0
+            self.overshoot = 0
+            self.sse = 0
+            self.sae = 0
+            self.prev_diff = 0.0
+            self.startTime = rospy.get_time()
+            self.setpoint = setpoint.value
         #print("Setpoint Updated to: " + str(self.setpoint) + " at time: " + str(setpoint.time) )
 
 if __name__=='__main__':

@@ -59,7 +59,7 @@ class InputGenerator:
         if not (self.signal == "step" or self.signal == "square" or self.signal == "sinusoidal"):
             rospy.loginfo("Using keyboard control. Press 'w' to increase the speed and 's' to decrease the speed. Press 'q' to quit.")
            
-            
+        self.x = 0
 
     def run(self):
         # Get the current time
@@ -79,6 +79,10 @@ class InputGenerator:
                     self.setpointValue =  self.amplitude
                 # Update the previous time for the next period
                 self.prevTime =  self.time
+                self.x += 1
+                if  self.x > 10:
+                    print("Test ended")
+
         elif self.signal == "step": 
             # Calculate the pwm value with a step function
             # Check if the time is less than the previous time + 5 seconds. If it is, set the pwm value to 0
